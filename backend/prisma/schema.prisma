@@ -72,6 +72,33 @@ enum AttachmentModerationStatus {
   FLAGGED
 }
 
+enum ReportReason {
+  HARASSMENT
+  SPAM
+  INAPPROPRIATE_CONTENT
+  THREATS
+  FAKE_PROFILE
+  OTHER
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ReportTargetType {
+  USER
+  MESSAGE
+  ATTACHMENT
+}
+
+enum ReportOutcome {
+  PENDING
+  VALID
+  INVALID
+}
+
 model University {
   id        String   @id @default(cuid())
   name      String
@@ -99,6 +126,8 @@ model Avatar {
   name String
 
   imageUrl String
+
+  isActive Boolean @default(true)
 
   users User[]
 }
@@ -136,6 +165,8 @@ model User {
 
   isSuspended Boolean @default(false)
 
+  suspendedUntil DateTime?
+
   isBanned Boolean @default(false)
 
   avatarId String?
@@ -162,6 +193,22 @@ model User {
 
   attachments Attachment[]
 
+  blocksGiven UserBlock[] @relation("UserBlocksGiven")
+
+  blocksReceived UserBlock[] @relation("UserBlocksReceived")
+
+  reportsCreated Report[] @relation("ReportsCreated")
+
+  reportsReceived Report[] @relation("ReportsReceived")
+
+  outingInterestsSent OutingInterest[] @relation("OutingInterestsSent")
+
+  outingInterestsReceived OutingInterest[] @relation("OutingInterestsReceived")
+
+  outingMatchesAsUser1 OutingMatch[] @relation("OutingMatchUser1")
+
+  outingMatchesAsUser2 OutingMatch[] @relation("OutingMatchUser2")
+
   @@index([universityId])
   @@index([gender])
   @@index([orientation])
@@ -174,6 +221,8 @@ model UsernameHistory {
   userId String
 
   oldUsername String
+
+  newUsername String
 
   changedAt DateTime @default(now())
 
@@ -188,6 +237,8 @@ model Conversation {
   type ConversationType
 
   universityId String?
+
+  outingMatch OutingMatch?
 
   isActive Boolean @default(true)
 
@@ -246,6 +297,8 @@ model Message {
 
   attachments Attachment[]
 
+  reports Report[]
+
   @@index([conversationId])
   @@index([senderId])
   @@index([createdAt])
@@ -285,6 +338,8 @@ model Attachment {
 
   fileType AttachmentType
 
+  mimeType String
+
   fileSize Int
 
   blurHash String?
@@ -301,7 +356,138 @@ model Attachment {
 
   uploader User @relation(fields: [uploaderId], references: [id])
 
+  reports Report[]
+
   @@index([messageId])
   @@index([uploaderId])
   @@index([moderationStatus])
+}
+
+model UserBlock {
+  id String @id @default(cuid())
+
+  blockerId String
+
+  blockedUserId String
+
+  createdAt DateTime @default(now())
+
+  blocker User @relation("UserBlocksGiven", fields: [blockerId], references: [id])
+
+  blockedUser User @relation("UserBlocksReceived", fields: [blockedUserId], references: [id])
+
+  @@unique([blockerId, blockedUserId])
+  @@index([blockerId])
+  @@index([blockedUserId])
+}
+
+model Report {
+  id String @id @default(cuid())
+
+  reporterId String
+
+  targetType ReportTargetType
+
+  reportedUserId String?
+
+  reportedMessageId String?
+
+  reportedAttachmentId String?
+
+  reason ReportReason
+
+  description String? @db.Text
+
+  status ReportStatus @default(PENDING)
+
+  outcome ReportOutcome @default(PENDING)
+
+  moderationNotes String? @db.Text
+
+  reviewedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  reporter User @relation("ReportsCreated", fields: [reporterId], references: [id])
+
+  reportedUser User? @relation("ReportsReceived", fields: [reportedUserId], references: [id])
+
+  reportedMessage Message? @relation(fields: [reportedMessageId], references: [id])
+
+  reportedAttachment Attachment? @relation(fields: [reportedAttachmentId], references: [id])
+
+  @@index([reporterId])
+
+  @@index([status])
+
+  @@index([outcome])
+
+  @@index([targetType])
+
+  @@index([reportedUserId])
+
+  @@index([reportedMessageId])
+
+  @@index([reportedAttachmentId])
+}
+
+model VerificationToken {
+  id String @id @default(cuid())
+
+  email String
+
+  token String
+
+  expiresAt DateTime
+
+  used Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
+model OutingInterest {
+  id String @id @default(cuid())
+
+  senderId String
+
+  receiverId String
+
+  status InterestStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  sender User @relation("OutingInterestsSent", fields: [senderId], references: [id])
+
+  receiver User @relation("OutingInterestsReceived", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model OutingMatch {
+  id String @id @default(cuid())
+
+  user1Id String
+
+  user2Id String
+
+  conversationId String @unique
+
+  matchedAt DateTime @default(now())
+
+  completedAt DateTime?
+
+  user1 User @relation("OutingMatchUser1", fields: [user1Id], references: [id])
+
+  user2 User @relation("OutingMatchUser2", fields: [user2Id], references: [id])
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([user1Id])
+  @@index([user2Id])
 }
