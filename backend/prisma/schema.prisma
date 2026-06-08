@@ -53,6 +53,25 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum AttachmentType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum AttachmentModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
 model University {
   id        String   @id @default(cuid())
   name      String
@@ -61,6 +80,8 @@ model University {
   users User[]
 
   domains UniversityDomain[]
+
+  conversations Conversation[]
 }
 
 model UniversityDomain {
@@ -70,6 +91,16 @@ model UniversityDomain {
   universityId String
 
   university University @relation(fields: [universityId], references: [id])
+}
+
+model Avatar {
+  id String @id @default(cuid())
+
+  name String
+
+  imageUrl String
+
+  users User[]
 }
 
 model User {
@@ -99,9 +130,15 @@ model User {
 
   isVerified Boolean @default(false)
 
+  verifiedAt DateTime?
+
+  readReceiptsEnabled Boolean @default(true)
+
   isSuspended Boolean @default(false)
 
   isBanned Boolean @default(false)
+
+  avatarId String?
 
   universityId String
 
@@ -111,13 +148,24 @@ model User {
 
   lastActiveAt DateTime @default(now())
 
+  avatar Avatar? @relation(fields: [avatarId], references: [id])
+
   university University @relation(fields: [universityId], references: [id])
 
   usernameHistory UsernameHistory[]
 
+  conversationParticipants ConversationParticipant[]
+
+  messages Message[]
+
+  messageReceipts MessageReceipt[]
+
+  attachments Attachment[]
+
   @@index([universityId])
   @@index([gender])
   @@index([orientation])
+  @@index([avatarId])
 }
 
 model UsernameHistory {
@@ -132,4 +180,128 @@ model UsernameHistory {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model Conversation {
+  id String @id @default(cuid())
+
+  type ConversationType
+
+  universityId String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  university University? @relation(fields: [universityId], references: [id])
+
+  participants ConversationParticipant[]
+
+  messages Message[]
+
+  @@index([universityId])
+}
+
+model ConversationParticipant {
+  id String @id @default(cuid())
+
+  conversationId String
+
+  userId String
+
+  joinedAt DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id String @id @default(cuid())
+
+  conversationId String
+
+  senderId String
+
+  senderUsername String
+
+  content String @db.Text
+
+  isDeleted Boolean @default(false)
+
+  isFlagged Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  sender User @relation(fields: [senderId], references: [id])
+
+  receipts MessageReceipt[]
+
+  attachments Attachment[]
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model MessageReceipt {
+  id String @id @default(cuid())
+
+  messageId String
+
+  recipientId String
+
+  status MessageStatus @default(SENT)
+
+  deliveredAt DateTime?
+
+  readAt DateTime?
+
+  message Message @relation(fields: [messageId], references: [id])
+
+  recipient User @relation(fields: [recipientId], references: [id])
+
+  @@unique([messageId, recipientId])
+  @@index([recipientId])
+}
+
+model Attachment {
+  id String @id @default(cuid())
+
+  messageId String
+
+  uploaderId String
+
+  fileUrl String
+
+  fileName String
+
+  fileType AttachmentType
+
+  fileSize Int
+
+  blurHash String?
+
+  moderationStatus AttachmentModerationStatus @default(PENDING)
+
+  moderationReason String?
+
+  nudityDetected Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id])
+
+  uploader User @relation(fields: [uploaderId], references: [id])
+
+  @@index([messageId])
+  @@index([uploaderId])
+  @@index([moderationStatus])
 }
