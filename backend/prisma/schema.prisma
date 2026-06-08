@@ -24,23 +24,6 @@ enum Orientation {
   BISEXUAL
 }
 
-enum RequestStatus {
-  OPEN
-  MATCHED
-  CANCELLED
-  EXPIRED
-}
-
-enum OutingCategory {
-  COFFEE
-  MOVIE
-  SPORTS
-  SHOPPING
-  EVENT
-  EXPLORING
-  OTHER
-}
-
 enum ConversationType {
   CAMPUS
   PRIVATE
@@ -70,6 +53,12 @@ enum AttachmentModerationStatus {
   APPROVED
   REJECTED
   FLAGGED
+}
+
+enum OutingMatchStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 enum ReportReason {
@@ -145,8 +134,6 @@ model User {
 
   availableThisWeekend Boolean @default(false)
 
-  lookingForRelationship Boolean @default(false)
-
   profileCompleted Boolean @default(false)
 
   reputationScore Float @default(5.0)
@@ -162,8 +149,6 @@ model User {
   verifiedAt DateTime?
 
   readReceiptsEnabled Boolean @default(true)
-
-  isSuspended Boolean @default(false)
 
   suspendedUntil DateTime?
 
@@ -229,6 +214,7 @@ model UsernameHistory {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([changedAt])
 }
 
 model Conversation {
@@ -245,6 +231,8 @@ model Conversation {
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
+
+  lastMessageAt DateTime?
 
   university University? @relation(fields: [universityId], references: [id])
 
@@ -417,17 +405,11 @@ model Report {
   reportedAttachment Attachment? @relation(fields: [reportedAttachmentId], references: [id])
 
   @@index([reporterId])
-
   @@index([status])
-
   @@index([outcome])
-
   @@index([targetType])
-
   @@index([reportedUserId])
-
   @@index([reportedMessageId])
-
   @@index([reportedAttachmentId])
 }
 
@@ -440,7 +422,8 @@ model VerificationToken {
 
   expiresAt DateTime
 
-  used Boolean @default(false)
+  // used Boolean @default(false)
+  usedAt DateTime?
 
   createdAt DateTime @default(now())
 
@@ -481,6 +464,8 @@ model OutingMatch {
   matchedAt DateTime @default(now())
 
   completedAt DateTime?
+
+  status OutingMatchStatus @default(ACTIVE)
 
   user1 User @relation("OutingMatchUser1", fields: [user1Id], references: [id])
 
