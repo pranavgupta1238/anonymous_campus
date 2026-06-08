@@ -11,3 +11,125 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Orientation {
+  STRAIGHT
+  GAY
+  LESBIAN
+  BISEXUAL
+}
+
+enum RequestStatus {
+  OPEN
+  MATCHED
+  CANCELLED
+  EXPIRED
+}
+
+enum OutingCategory {
+  COFFEE
+  MOVIE
+  SPORTS
+  SHOPPING
+  EVENT
+  EXPLORING
+  OTHER
+}
+
+enum ConversationType {
+  CAMPUS
+  PRIVATE
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+model University {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users User[]
+
+  domains UniversityDomain[]
+}
+
+model UniversityDomain {
+  id           String @id @default(cuid())
+  domain       String @unique
+
+  universityId String
+
+  university University @relation(fields: [universityId], references: [id])
+}
+
+model User {
+  id String @id @default(cuid())
+
+  email String @unique
+
+  publicUsername String @unique
+
+  gender Gender
+
+  orientation Orientation
+
+  availableThisWeekend Boolean @default(false)
+
+  lookingForRelationship Boolean @default(false)
+
+  profileCompleted Boolean @default(false)
+
+  reputationScore Float @default(5.0)
+
+  successfulOutings Int @default(0)
+
+  noShowCount Int @default(0)
+
+  reportsCount Int @default(0)
+
+  isVerified Boolean @default(false)
+
+  isSuspended Boolean @default(false)
+
+  isBanned Boolean @default(false)
+
+  universityId String
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  lastActiveAt DateTime @default(now())
+
+  university University @relation(fields: [universityId], references: [id])
+
+  usernameHistory UsernameHistory[]
+
+  @@index([universityId])
+  @@index([gender])
+  @@index([orientation])
+}
+
+model UsernameHistory {
+  id String @id @default(cuid())
+
+  userId String
+
+  oldUsername String
+
+  changedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
