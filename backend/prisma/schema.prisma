@@ -64,8 +64,8 @@ model University {
 }
 
 model UniversityDomain {
-  id           String @id @default(cuid())
-  domain       String @unique
+  id     String @id @default(cuid())
+  domain String @unique
 
   universityId String
 
